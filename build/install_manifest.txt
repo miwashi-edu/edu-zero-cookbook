@@ -1,0 +1,2 @@
+/usr/local/bin/hello1
+/usr/local/bin/hello2

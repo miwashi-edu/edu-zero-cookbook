@@ -32,177 +32,112 @@ FetchContent_MakeAvailable(CLI11)
 
 add_subdirectory(src)
 
-install(TARGETS tcp_client udp_client http_client DESTINATION bin)
+install(TARGETS net_client bin)
 EOF
 ```
 
 ```bash
 cat > ./src/CMakeLists.txt << EOF
-add_executable(udp_client udp_client.cpp)
-add_executable(tcp_client tcp_client.cpp)
-add_executable(http_client http_client.cpp)
+add_executable(net_client main.cpp)
 
-target_link_libraries(udp_client PRIVATE CLI11::CLI11)
-target_link_libraries(tcp_client PRIVATE CLI11::CLI11)
-target_link_libraries(http_client PRIVATE CLI11::CLI11)
+target_link_libraries(net_client PRIVATE CLI11::CLI11)
 EOF
 ```
 
-## TCP Client
+## Net Client
 
 ```bash
-cat > ./src/tcp_client.cpp << EOF
+cat > ./src/main.cpp << EOF
 #include <CLI/CLI.hpp>
 #include <iostream>
 #include <string>
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
-
-int main(int argc, char** argv) {
-    std::string ip;
-    int port;
-
-    CLI::App app{"TCP Hello Sender"};
-    app.add_option("--ip", ip, "Target IP")->required();
-    app.add_option("--port", port, "Target Port")->required();
-    CLI11_PARSE(app, argc, argv);
-
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        perror("socket");
-        return 1;
-    }
-
-    sockaddr_in server_addr{};
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr);
-
-    if (connect(sock, (sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect");
-        close(sock);
-        return 1;
-    }
-
-    const char* message = "tcp hello";
-    if (send(sock, message, strlen(message), 0) < 0) {
-        perror("send");
-        close(sock);
-        return 1;
-    }
-
-    std::cout << "Sent TCP message: " << message << "\n";
-    close(sock);
-    return 0;
-}
-EOF
-```
-
-## UDP Client
-
-```bash
-cat > ./src/udp_client.cpp << EOF
-#include <CLI/CLI.hpp>
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-
-int main(int argc, char** argv) {
-    std::string ip;
-    int port;
-
-    CLI::App app{"UDP Hello Sender"};
-    app.add_option("--ip", ip, "Target IP")->required();
-    app.add_option("--port", port, "Target Port")->required();
-    CLI11_PARSE(app, argc, argv);
-
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock < 0) {
-        perror("socket");
-        return 1;
-    }
-
-    sockaddr_in server_addr{};
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr);
-
-    const char* message = "udp hello";
-    if (sendto(sock, message, strlen(message), 0,
-               (sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("sendto");
-        close(sock);
-        return 1;
-    }
-
-    std::cout << "Sent UDP message: " << message << "\n";
-    close(sock);
-    return 0;
-}
-EOF
-```
-
-## UDP Client
-
-```bash
-cat > ./src/http_client.cpp << EOF
-#include <CLI/CLI.hpp>
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <unistd.h>
 #include <netdb.h>
-#include <arpa/inet.h>
 
-int main(int argc, char** argv) {
-    std::string ip;
-    int port;
+void send_udp(const std::string& ip, int port, const std::string& msg) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) { perror("socket"); exit(1); }
 
-    CLI::App app{"HTTP Hello Poster"};
-    app.add_option("--ip", ip, "Target IP")->required();
-    app.add_option("--port", port, "Target Port")->required();
-    CLI11_PARSE(app, argc, argv);
+    sockaddr_in server{};
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    inet_pton(AF_INET, ip.c_str(), &server.sin_addr);
 
+    sendto(sock, msg.c_str(), msg.size(), 0, (sockaddr*)&server, sizeof(server));
+    std::cout << "Sent UDP: " << msg << "\n";
+    close(sock);
+}
+
+void send_tcp(const std::string& ip, int port, const std::string& msg) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        perror("socket");
-        return 1;
-    }
+    if (sock < 0) { perror("socket"); exit(1); }
 
-    sockaddr_in server_addr{};
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr);
+    sockaddr_in server{};
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    inet_pton(AF_INET, ip.c_str(), &server.sin_addr);
 
-    if (connect(sock, (sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+    if (connect(sock, (sockaddr*)&server, sizeof(server)) < 0) {
         perror("connect");
         close(sock);
-        return 1;
+        exit(1);
     }
 
-    const char* body = "{\"message\":\"http hello\"}";
-    char request[1024];
-    snprintf(request, sizeof(request),
-             "POST / HTTP/1.1\r\n"
-             "Host: %s\r\n"
-             "Content-Type: application/json\r\n"
-             "Content-Length: %ld\r\n"
-             "Connection: close\r\n"
-             "\r\n"
-             "%s",
-             ip.c_str(), strlen(body), body);
+    send(sock, msg.c_str(), msg.size(), 0);
+    std::cout << "Sent TCP: " << msg << "\n";
+    close(sock);
+}
 
-    if (send(sock, request, strlen(request), 0) < 0) {
-        perror("send");
+void send_http(const std::string& ip, int port, const std::string& msg) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) { perror("socket"); exit(1); }
+
+    sockaddr_in server{};
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    inet_pton(AF_INET, ip.c_str(), &server.sin_addr);
+
+    if (connect(sock, (sockaddr*)&server, sizeof(server)) < 0) {
+        perror("connect");
         close(sock);
-        return 1;
+        exit(1);
     }
 
+    std::string body = "{\"message\":\"" + msg + "\"}";
+    std::string request =
+        "POST / HTTP/1.1\r\n"
+        "Host: " + ip + "\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: " + std::to_string(body.size()) + "\r\n"
+        "Connection: close\r\n\r\n" + body;
+
+    send(sock, request.c_str(), request.size(), 0);
     std::cout << "Sent HTTP POST:\n" << request << "\n";
     close(sock);
+}
+
+int main(int argc, char** argv) {
+    std::string protocol, ip, message;
+    int port;
+
+    CLI::App app{"Unified Client"};
+    app.add_option("--protocol", protocol, "tcp | udp | http")->required();
+    app.add_option("--ip", ip, "Target IP")->required();
+    app.add_option("--port", port, "Target Port")->required();
+    app.add_option("--message", message, "Message to send")->default_val("hello");
+
+    CLI11_PARSE(app, argc, argv);
+
+    if (protocol == "udp") send_udp(ip, port, message);
+    else if (protocol == "tcp") send_tcp(ip, port, message);
+    else if (protocol == "http") send_http(ip, port, message);
+    else {
+        std::cerr << "Unknown protocol: " << protocol << "\n";
+        return 1;
+    }
+
     return 0;
 }
 EOF

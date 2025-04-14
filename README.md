@@ -2,6 +2,9 @@
 
 ## Instructions
 
+> TCP Lyssnare `nc -l -p 9000`
+> UDP Lyssnare `nc -u -l -p 9001`
+
 ```bash
 git clone
 https://github.com/miwashi-edu/edu-zero-cookbook

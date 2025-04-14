@@ -149,3 +149,11 @@ EOF
 cmake -B build
 sudo make -C build install
 ```
+
+## Test
+
+```bash
+./bin/net_client --protocol udp --ip 127.0.0.1 --port 9001 --message "hi from udp"
+./bin/net_client --protocol tcp --ip 127.0.0.1 --port 9000 --message "hi from tcp"
+./bin/net_client --protocol http --ip 127.0.0.1 --port 3000 --message "hi from http"
+```

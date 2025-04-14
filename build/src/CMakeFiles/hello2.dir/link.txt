@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/hello2.dir/main.cpp.o -o /home/dev/ws/zero-project/bin/hello2 

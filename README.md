@@ -32,7 +32,7 @@ FetchContent_MakeAvailable(CLI11)
 
 add_subdirectory(src)
 
-install(TARGETS net_client bin)
+install(TARGETS net_client DESTINATION bin)
 EOF
 ```
 

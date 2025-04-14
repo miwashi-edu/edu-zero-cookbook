@@ -150,6 +150,16 @@ cmake -B build
 sudo make -C build install
 ```
 
+## Cron
+
+```
+sudo apt install -y cron # One time only
+sudo /usr/sbin/cron # Start manually as we are in docker, not zero
+crontab -e # After this an editor is opened, add the following line to end
+* * * * * /bin/net_client --protocol udp --ip 192.168.0.10 --port 9001 --message "hello" >> /var/log/net_client.log 2>&1
+tail -f /var/log/net_client.log
+```
+
 ## Test
 
 ```bash
@@ -157,3 +167,9 @@ sudo make -C build install
 ./bin/net_client --protocol tcp --ip 127.0.0.1 --port 9000 --message "hi from tcp"
 ./bin/net_client --protocol http --ip 127.0.0.1 --port 3000 --message "hi from http"
 ```
+
+## Run
+
+```bash
+```
+

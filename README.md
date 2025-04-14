@@ -158,3 +158,10 @@ EOF
 cmake -B build
 sudo make -C build install
 ```
+
+## Test
+
+```
+net_client --protocol udp --ip 127.0.0.1 --port 9001 --message "ping"
+```
+

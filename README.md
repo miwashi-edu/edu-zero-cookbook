@@ -33,6 +33,7 @@ FetchContent_MakeAvailable(CLI11)
 add_subdirectory(src)
 
 install(TARGETS net_client DESTINATION bin)
+install(FILES net_client.service DESTINATION lib/systemd/system)
 EOF
 ```
 
@@ -152,6 +153,23 @@ int main(int argc, char** argv) {
 EOF
 ```
 
+```bash
+cat > net_client.service << EOF
+[Unit]
+Description=Repeating Network Client
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/client --protocol udp --ip 127.0.0.1 --port 9001 --message hello
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
 ## Build
 
 ```
@@ -161,7 +179,19 @@ sudo make -C build install
 
 ## Test
 
-```
+```bash
 net_client --protocol udp --ip 127.0.0.1 --port 9001 --message "ping"
+```
+
+## Service
+
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable net_client
+sudo systemctl start net_client
+##
+sudo systemctl status client
+journalctl -u net_client -f
 ```
 
